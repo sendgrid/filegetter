@@ -21,7 +21,7 @@ func TestGetMessage(t *testing.T) {
 		// represents the data in the file
 		data []byte
 		// the GetMessage method will report back if it was remote or local for the source of the file
-		expectedSource string
+		expectedSource Source
 		// set what the remote err should be
 		remoteErr error
 		// set what the local err should be
@@ -42,7 +42,7 @@ func TestGetMessage(t *testing.T) {
 			bucket:         "bucket",
 			key:            "key",
 			host:           "host",
-			expectedSource: SourceRemote,
+			expectedSource: Remote,
 			remoteErr:      nil,
 			localErr:       nil,
 			expectedErr:    nil,
@@ -55,7 +55,7 @@ func TestGetMessage(t *testing.T) {
 			bucket:         "bucket",
 			key:            "key",
 			host:           "host",
-			expectedSource: SourceLocal,
+			expectedSource: Local,
 			remoteErr:      nil,
 			localErr:       nil,
 			expectedErr:    nil,
@@ -68,7 +68,7 @@ func TestGetMessage(t *testing.T) {
 			bucket:         "bucket",
 			key:            "key",
 			host:           "host",
-			expectedSource: SourceLocal,
+			expectedSource: Local,
 			remoteErr:      fmt.Errorf("unable to remote"),
 			localErr:       nil,
 			expectedErr:    nil,
@@ -81,7 +81,7 @@ func TestGetMessage(t *testing.T) {
 			bucket:         "bucket",
 			key:            "key",
 			host:           "host",
-			expectedSource: SourceLocal,
+			expectedSource: Local,
 			remoteErr:      fmt.Errorf("falling back to local source"),
 			localErr:       fmt.Errorf("unable to read from disk"),
 			expectedErr:    fmt.Errorf("unable to read from disk"),
@@ -94,7 +94,7 @@ func TestGetMessage(t *testing.T) {
 			bucket:         "",
 			key:            "key",
 			host:           "host",
-			expectedSource: SourceLocal,
+			expectedSource: Local,
 			remoteErr:      nil,
 			localErr:       nil,
 			expectedErr:    nil,
@@ -107,7 +107,7 @@ func TestGetMessage(t *testing.T) {
 			bucket:         "bucket",
 			key:            "",
 			host:           "host",
-			expectedSource: SourceLocal,
+			expectedSource: Local,
 			remoteErr:      nil,
 			localErr:       nil,
 			expectedErr:    nil,
@@ -120,7 +120,7 @@ func TestGetMessage(t *testing.T) {
 			bucket:         "bucket",
 			key:            "key",
 			host:           "",
-			expectedSource: SourceLocal,
+			expectedSource: Local,
 			remoteErr:      nil,
 			localErr:       nil,
 			expectedErr:    nil,
@@ -130,10 +130,10 @@ func TestGetMessage(t *testing.T) {
 		t.Run(fmt.Sprintf("%s", test.name), func(t *testing.T) {
 			// Set up and call GetMessage
 			logBuf := &bytes.Buffer{}
-			getter := New(log.New(logBuf, "test", log.LstdFlags), test.useRemoteFS, "accesskey", "accesssecret")
-			getter.remoteGetter = &fakeRemote{data: test.data, err: test.remoteErr}
-			getter.localGetter = &fakeLocal{data: test.data, err: test.localErr}
-			fh, source, err := getter.GetFile("localpath", test.host, test.bucket, test.key)
+			fetcher := New(log.New(logBuf, "test", log.LstdFlags), test.useRemoteFS, "accesskey", "accesssecret")
+			fetcher.remoteFetcher = &fakeRemote{data: test.data, err: test.remoteErr}
+			fetcher.localFetcher = &fakeLocal{data: test.data, err: test.localErr}
+			fh, source, err := fetcher.FetchFile("localpath", test.host, test.bucket, test.key)
 
 			// make sure that everything was as expected
 			assert.Equal(t, test.expectedSource, source)
@@ -162,7 +162,7 @@ type fakeRemote struct {
 	err  error
 }
 
-func (f *fakeRemote) GetRemoteFile(accessKey, accessSecret, host, bucket, key string) (io.ReadCloser, error) {
+func (f *fakeRemote) FetchRemoteFile(accessKey, accessSecret, host, bucket, key string) (io.ReadCloser, error) {
 	return ioutil.NopCloser(bytes.NewReader(f.data)), f.err
 }
 

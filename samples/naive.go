@@ -9,11 +9,13 @@ import (
 	"github.com/pkg/errors"
 )
 
+type Source string
+
 const (
-	// SourceLocal signifies we are using a local file source
-	SourceLocal = "local"
-	//SourceRemote signifies we are using a remote file source
-	SourceRemote = "remote"
+	// Local signifies we are using a local file source
+	Local Source = "local"
+	//Remote signifies we are using a remote file source
+	Remote Source = "remote"
 )
 
 // Getter contains unexported properties for accessing local and remote files
@@ -34,8 +36,8 @@ func New(l *log.Logger, useRemoteFS bool, accessKey, accessSecret string) *Gette
 	}
 }
 
-// GetFile takes in the parameters needed to do both local and remote file getting
-func (g *Getter) GetFile(localPath, host, bucket, key string) (io.ReadCloser, string, error) {
+// FetchFile takes in the parameters needed to do both local and remote file getting
+func (g *Getter) FetchFile(localPath, host, bucket, key string) (io.ReadCloser, Source, error) {
 	if g.useRemoteFS && host != "" && key != "" && bucket != "" {
 		// we have everything we need to do remote fs stuff
 		var err error
@@ -54,7 +56,7 @@ func (g *Getter) GetFile(localPath, host, bucket, key string) (io.ReadCloser, st
 				if err != nil {
 					err = errors.Wrap(err, "unable to get remote file info")
 				} else {
-					return obj, SourceRemote, nil
+					return obj, Remote, nil
 				}
 			}
 		}
@@ -70,5 +72,5 @@ func (g *Getter) GetFile(localPath, host, bucket, key string) (io.ReadCloser, st
 		return nil, "", err
 	}
 
-	return fh, SourceLocal, nil
+	return fh, Local, nil
 }

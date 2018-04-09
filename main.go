@@ -19,7 +19,7 @@ func main() {
 	fileFetcher := getter.New(logger, useRemoteFS, key, secret)
 
 	for job := range jobs {
-		data, source, err := fileFetcher.GetFile(job.FilePath, job.Host, job.Bucket, job.Key)
+		data, source, err := fileFetcher.FetchFile(job.FilePath, job.Host, job.Bucket, job.Key)
 		if err != nil {
 			// handle err
 		}

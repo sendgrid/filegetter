@@ -8,8 +8,8 @@ expectedData := []byte("file data")
 getter := New(useRemote, "accesskey", "accesssecret")
 
 // override the remote and local getters to use fakes that return some error
-getter.remoteGetter = &fakeRemote{data: expectedData, err: expectedRemoteErr}
-getter.localGetter = &fakeLocal{data: expectedData, err: expectedLocalErr}
+getter.remoteFetcher = &fakeRemote{data: expectedData, err: expectedRemoteErr}
+getter.localFetcher = &fakeLocal{data: expectedData, err: expectedLocalErr}
 fh, source, err := getter.GetMessage("localpath", "host", "bucket", "key")
 
 // assert against the return values that include the file data, the source of the file data (or error), and the error

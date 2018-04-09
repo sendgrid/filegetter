@@ -9,17 +9,20 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Source allows us to have a type safe return value specifying if a file was remote or local
+type Source string
+
 const (
-	// SourceLocal signifies if a file or error came from local disk
-	SourceLocal = "local"
-	// SourceRemote signifies if a file or error came from the remote disk
-	SourceRemote = "remote"
+	// Local signifies we are using a local file source
+	Local Source = "local"
+	//Remote signifies we are using a remote file source
+	Remote Source = "remote"
 )
 
-// FileGetter allows us to get a ReadCloser, the source (remote/local), or an error when attempting to get
+// FileFetcher allows us to get a ReadCloser, the source (remote/local), or an error when attempting to get
 // a file from either local or remote storage
-type FileGetter interface {
-	GetFile(localPath, host, bucket, key string) (io.ReadCloser, string, error)
+type FileFetcher interface {
+	FetchFile(localPath, host, bucket, key string) (io.ReadCloser, Source, error)
 }
 
 // Getter contains unexported fields allowing the local or remote fetching of files
@@ -29,8 +32,8 @@ type Getter struct {
 	accessKey    string
 	accessSecret string
 
-	remoteGetter remoteGetter
-	localGetter  localGetter
+	remoteFetcher remoteFetcher
+	localFetcher  localFetcher
 }
 
 // New creates a instatialized Getter that can get files locally or remotely.
@@ -38,22 +41,22 @@ type Getter struct {
 // accessKey and accessSecret are authentication parts for the remote file system.
 func New(logger *log.Logger, useRemoteFS bool, accessKey, accessSecret string) *Getter {
 	return &Getter{
-		logger:       logger,
-		useRemoteFS:  useRemoteFS,
-		accessKey:    accessKey,
-		accessSecret: accessSecret,
-		remoteGetter: &minioWrapper{},
-		localGetter:  &osFile{},
+		logger:        logger,
+		useRemoteFS:   useRemoteFS,
+		accessKey:     accessKey,
+		accessSecret:  accessSecret,
+		remoteFetcher: &minioWrapper{},
+		localFetcher:  &osFile{},
 	}
 }
 
-// GetFile will reach out to s3 or use the local file system to retrieve an email file
-func (g *Getter) GetFile(localPath, host, bucket, key string) (io.ReadCloser, string, error) {
+// FetchFile will reach out to s3 or use the local file system to retrieve an email file
+func (g *Getter) FetchFile(localPath, host, bucket, key string) (io.ReadCloser, Source, error) {
 	if g.useRemoteFS && host != "" && key != "" && bucket != "" {
 		// we have everything we need to do remote fs stuff
-		fh, err := g.remoteGetter.GetRemoteFile(g.accessKey, g.accessSecret, host, bucket, key)
+		fh, err := g.remoteFetcher.FetchRemoteFile(g.accessKey, g.accessSecret, host, bucket, key)
 		if err == nil {
-			return fh, SourceRemote, nil
+			return fh, Remote, nil
 		}
 
 		g.logger.Printf("falling back to local source - %v", err)
@@ -62,23 +65,23 @@ func (g *Getter) GetFile(localPath, host, bucket, key string) (io.ReadCloser, st
 		g.logger.Printf(`falling back to local source - missing fields. "host":%q, "bucket":%q, "key":%q`, host, bucket, key)
 	}
 
-	fh, err := g.localGetter.Open(localPath)
+	fh, err := g.localFetcher.Open(localPath)
 	if err != nil {
-		return nil, SourceLocal, err
+		return nil, Local, err
 	}
 
-	return fh, SourceLocal, nil
+	return fh, Local, nil
 }
 
-type remoteGetter interface {
-	GetRemoteFile(accessKey, accessSecret, host, bucket, key string) (io.ReadCloser, error)
+type remoteFetcher interface {
+	FetchRemoteFile(accessKey, accessSecret, host, bucket, key string) (io.ReadCloser, error)
 }
 
-// minioWrapper adheres to the remoteGetter interface
+// minioWrapper adheres to the remoteFetcher interface
 type minioWrapper struct{}
 
-// GetRemoteFile returns a remote file
-func (*minioWrapper) GetRemoteFile(accessKey, accessSecret, host, bucket, key string) (io.ReadCloser, error) {
+// FetchRemoteFile returns a remote file
+func (*minioWrapper) FetchRemoteFile(accessKey, accessSecret, host, bucket, key string) (io.ReadCloser, error) {
 	client, err := minio.NewV2(host, accessKey, accessSecret, false)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to get remote fs client")
@@ -96,11 +99,11 @@ func (*minioWrapper) GetRemoteFile(accessKey, accessSecret, host, bucket, key st
 	return obj, nil
 }
 
-type localGetter interface {
+type localFetcher interface {
 	Open(localPath string) (io.ReadCloser, error)
 }
 
-// osFile adheres to the localGetter interface
+// osFile adheres to the localFetcher interface
 type osFile struct{}
 
 // Open opens a local file
