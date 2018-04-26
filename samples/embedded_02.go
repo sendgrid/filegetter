@@ -1,7 +1,7 @@
 import "io"
 
 type RemoteFetcher interface {
-	GetRemoteMessage(accessKey, accessSecret, host, bucket, key string) (io.ReadCloser, error)
+	GetRemoteFile(accessKey, accessSecret, host, bucket, key string) (io.ReadCloser, error)
 }
 
 // minioWrapper will adhere to the RemoteFetcher interface
