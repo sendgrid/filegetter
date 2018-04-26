@@ -18,10 +18,10 @@ const (
 	Remote Source = "remote"
 )
 
-// MessageGetter allows us to get a ReadCloser, the source (remote/local), or an error when attempting to get
-// a message from either local or remote storage
-type MessageGetter interface {
-	GetMessage(localPath, host, bucket, key string) (io.ReadCloser, Source, error)
+// FileGetter allows us to get a ReadCloser, the source (remote/local), or an error when attempting to get
+// a file from either local or remote storage
+type FileGetter interface {
+	GetFile(localPath, host, bucket, key string) (io.ReadCloser, Source, error)
 }
 
 // Getter contains unexported fields allowing the local or remote fetching of files
@@ -48,12 +48,12 @@ func New(useRemoteFS, accessKey, accessSecret string) *Getter {
 	}
 }
 
-// GetMessage will reach out to s3 or use the local file system to retrieve an email message
-func (g *Getter) GetMessage(localPath, host, bucket, key string) (io.ReadCloser, Source, error) {
+// GetFile will reach out to s3 or use the local file system to retrieve an email file
+func (g *Getter) GetFile(localPath, host, bucket, key string) (io.ReadCloser, Source, error) {
 	// validation against host, bucket, and key elided for brefity
 	if g.useRemoteFS {
 		// we have everything we need to do remote fs stuff
-		fh, err := g.remoteFetcher.FetchRemoteMessage(g.accessKey, g.accessSecret, host, bucket, key)
+		fh, err := g.remoteFetcher.FetchRemoteFile(g.accessKey, g.accessSecret, host, bucket, key)
 		if err == nil {
 			// early return
 			return fh, Remote, nil
@@ -69,12 +69,12 @@ func (g *Getter) GetMessage(localPath, host, bucket, key string) (io.ReadCloser,
 }
 
 type RemoteFetcher interface {
-	FetchRemoteMessage(accessKey, accessSecret, host, bucket, key string) (io.ReadCloser, error)
+	FetchRemoteFile(accessKey, accessSecret, host, bucket, key string) (io.ReadCloser, error)
 }
 
 type minioWrapper struct{}
 
-func (_ *minioWrapper) FetchRemoteMessage(accessKey, accessSecret, host, bucket, key string) (io.ReadCloser, error) {
+func (_ *minioWrapper) FetchRemoteFile(accessKey, accessSecret, host, bucket, key string) (io.ReadCloser, error) {
 	client, err := minio.NewV2(host, accessKey, accessSecret, false)
 	if err != nil { /* return wrapped error */
 	}

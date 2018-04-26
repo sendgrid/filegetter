@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestGetMessage verifies that we can get remote and local files and that we handle errors
-func TestGetMessage(t *testing.T) {
+// TestGetFile verifies that we can get remote and local files and that we handle errors
+func TestGetFile(t *testing.T) {
 	for _, test := range []struct {
 		// name gives us a test indentifier for if a test fails, we can know which one
 		name string
@@ -20,17 +20,17 @@ func TestGetMessage(t *testing.T) {
 		useRemoteFS bool
 		// represents the data in the file
 		data []byte
-		// the GetMessage method will report back if it was remote or local for the source of the file
+		// the GetFile method will report back if it was remote or local for the source of the file
 		expectedSource Source
 		// set what the remote err should be
 		remoteErr error
 		// set what the local err should be
 		localErr error
-		// the error returned from GetMessage depending on how remoteErr and localErr behaved
+		// the error returned from GetFile depending on how remoteErr and localErr behaved
 		expectedErr error
 		// allow us to inspect any error logs generated
 		expectedLogs []string
-		// parameters into GetMessage. We expect errors if any are blank
+		// parameters into GetFile. We expect errors if any are blank
 		bucket string
 		key    string
 		host   string
@@ -128,7 +128,7 @@ func TestGetMessage(t *testing.T) {
 		},
 	} {
 		t.Run(fmt.Sprintf("%s", test.name), func(t *testing.T) {
-			// Set up and call GetMessage
+			// Set up and call GetFile
 			logBuf := &bytes.Buffer{}
 			fetcher := New(log.New(logBuf, "test", log.LstdFlags), test.useRemoteFS, "accesskey", "accesssecret")
 			fetcher.remoteFetcher = &fakeRemote{data: test.data, err: test.remoteErr}
@@ -148,7 +148,7 @@ func TestGetMessage(t *testing.T) {
 				return
 			}
 
-			// verify message content
+			// verify file content
 			data, err := ioutil.ReadAll(fh)
 			assert.NoError(t, err)
 			assert.Equal(t, test.data, data)
